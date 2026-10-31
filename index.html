@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Turn horizontal videos into vertical 9:16. The black bars are filled with a zoomed, faded copy of your own video. Runs entirely in your browser." />
+    <meta name="color-scheme" content="light dark" />
+    <title>Vertify</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230a0a0a'/%3E%3Crect x='10' y='5' width='12' height='22' rx='2.5' fill='%23fff' opacity='.28'/%3E%3Crect x='10' y='12' width='12' height='8' rx='1.5' fill='%23fff'/%3E%3C/svg%3E" />
+  </head>
+  <body>
+    <header class="bar">
+      <div class="bar-inner">
+        <a class="brand" href="/" aria-label="Vertify home">
+          <svg class="mark" viewBox="0 0 32 32" aria-hidden="true">
+            <rect width="32" height="32" rx="8" />
+            <rect class="mark-bg" x="10" y="5" width="12" height="22" rx="2.5" />
+            <rect class="mark-fg" x="10" y="12" width="12" height="8" rx="1.5" />
+          </svg>
+          <span>Vertify</span>
+        </a>
+        <p class="private"><span class="icon" data-icon="shield"></span>Processed on your device</p>
+      </div>
+    </header>
+
+    <main class="canvas">
+      <div class="title">
+        <h1>Make it vertical</h1>
+        <p>Fills the black bars with a zoomed, faded copy of your own video.</p>
+      </div>
+
+      <p id="unsupported" class="notice" role="alert" hidden></p>
+
+      <label id="drop" class="drop" tabindex="0">
+        <input id="file" type="file" accept="video/*" class="visually-hidden" />
+        <span class="icon drop-icon" data-icon="upload"></span>
+        <strong>Drop a video here, or choose a file</strong>
+        <span class="hint">MP4, MOV or WebM. Nothing is uploaded.</span>
+        <span class="recipe" aria-hidden="true">
+          <span class="recipe-item">
+            <span class="frame"><span class="layer-fg"></span></span>
+            <span class="caption">Your video</span>
+          </span>
+          <span class="op">+</span>
+          <span class="recipe-item">
+            <span class="frame"><span class="layer-bg"></span></span>
+            <span class="caption">Zoomed copy, 20%</span>
+          </span>
+          <span class="op">=</span>
+          <span class="recipe-item">
+            <span class="frame"><span class="layer-bg"></span><span class="layer-fg"></span></span>
+            <span class="caption">Vertical result</span>
+          </span>
+        </span>
+      </label>
+
+      <section id="editor" class="editor" hidden>
+        <div class="stage">
+          <canvas id="preview" aria-label="Preview of the vertical result"></canvas>
+          <button id="toggle" class="btn icon-btn" type="button" aria-label="Pause preview">
+            <span class="icon" data-icon="pause"></span>
+          </button>
+        </div>
+
+        <div class="panel">
+          <div class="file">
+            <span class="icon" data-icon="video"></span>
+            <div class="file-text">
+              <p id="fileName" class="file-name"></p>
+              <p id="fileMeta" class="file-meta"></p>
+            </div>
+            <button id="reset" class="btn text-btn" type="button">Change</button>
+          </div>
+
+          <div class="field">
+            <div class="field-head">
+              <label for="opacity">Background opacity</label>
+              <output id="opacityOut" class="num" for="opacity">20%</output>
+            </div>
+            <input id="opacity" type="range" min="0" max="100" step="1" value="20" />
+          </div>
+
+          <fieldset class="field">
+            <legend>Output size</legend>
+            <div class="seg" role="radiogroup">
+              <label><input type="radio" name="res" value="720x1280" /><span>720 × 1280</span></label>
+              <label><input type="radio" name="res" value="1080x1920" checked /><span>1080 × 1920</span></label>
+            </div>
+          </fieldset>
+
+          <fieldset class="field">
+            <legend>Quality</legend>
+            <div class="seg" role="radiogroup">
+              <label><input type="radio" name="quality" value="medium" /><span>Standard</span></label>
+              <label><input type="radio" name="quality" value="high" checked /><span>High</span></label>
+            </div>
+          </fieldset>
+
+          <label class="switch-row">
+            <span class="switch-text">
+              <span class="switch-title">GPU encoding <span id="gpuState" class="chip"></span></span>
+              <span id="gpuHint" class="hint"></span>
+            </span>
+            <input id="gpu" type="checkbox" role="switch" checked />
+            <span class="switch" aria-hidden="true"></span>
+          </label>
+
+          <div class="actions">
+            <button id="convert" class="btn primary" type="button">Convert</button>
+            <button id="cancel" class="btn" type="button" hidden>Cancel</button>
+          </div>
+
+          <div id="progressWrap" class="progress" hidden>
+            <div class="progress-head">
+              <span id="progressLabel">Encoding</span>
+              <span id="progressValue" class="num">0%</span>
+            </div>
+            <progress id="progress" max="100" value="0" aria-label="Conversion progress"></progress>
+          </div>
+
+          <p id="error" class="notice" role="alert" hidden></p>
+
+          <div id="result" class="result" hidden>
+            <span class="icon" data-icon="done"></span>
+            <div class="file-text">
+              <p id="resultName" class="file-name"></p>
+              <p id="resultMeta" class="file-meta"></p>
+            </div>
+            <a id="download" class="btn primary" download="vertical.mp4">
+              <span class="icon" data-icon="download"></span>Download
+            </a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="foot">Open source under the MIT license.</footer>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
