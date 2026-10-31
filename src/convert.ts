@@ -11,7 +11,19 @@ import {
   QUALITY_MEDIUM,
 } from 'mediabunny';
 import { composeFrame } from './compose';
+import { drawPopup, loadPopupFont, POPUP_SECONDS, type PopupPosition } from './overlay';
 import type { EncoderMode } from './support';
+
+export interface TrailerOptions {
+  /** Where the trailer starts in the source video, in seconds. */
+  start: number;
+  /** Trailer length in seconds. */
+  length: number;
+  /** Text shown in the popup during the last seconds. */
+  text: string;
+  /** Where the popup sits in the frame. */
+  position: PopupPosition;
+}
 
 export interface VideoInfo {
   width: number;
@@ -27,6 +39,8 @@ export interface ConvertOptions {
   opacity: number;
   quality: 'high' | 'medium';
   gpu: boolean;
+  /** When set, only a short section is exported, with a text popup at its end. */
+  trailer?: TrailerOptions;
   /** 0..1 */
   onProgress: (progress: number) => void;
   signal: AbortSignal;
@@ -64,7 +78,12 @@ export async function probe(file: File): Promise<VideoInfo> {
 }
 
 async function runOnce(options: ConvertOptions, hardware: boolean): Promise<Blob> {
-  const { file, outWidth, outHeight, opacity, quality, onProgress, signal } = options;
+  const { file, outWidth, outHeight, opacity, quality, trailer, onProgress, signal } = options;
+
+  if (trailer) await loadPopupFont(trailer.text);
+  const popupStart = trailer ? trailer.length - Math.min(POPUP_SECONDS, trailer.length) : 0;
+  // Timestamps seen by `process` are either source time or trim-relative; settle on the first frame.
+  let clock: number | null = null;
 
   const canvas = new OffscreenCanvas(outWidth, outHeight);
   const ctx = canvas.getContext('2d', { alpha: false });
@@ -92,11 +111,23 @@ async function runOnce(options: ConvertOptions, hardware: boolean): Promise<Blob
             outHeight,
             { opacity },
           );
+          if (trailer) {
+            clock ??= sample.timestamp >= trailer.start - 0.5 ? trailer.start : 0;
+            drawPopup(
+              ctx,
+              trailer.text,
+              outWidth,
+              outHeight,
+              sample.timestamp - clock - popupStart,
+              trailer.position,
+            );
+          }
           return canvas;
         },
         processedWidth: outWidth,
         processedHeight: outHeight,
       },
+      trim: trailer ? { start: trailer.start, end: trailer.start + trailer.length } : undefined,
       // Drop the source file's tags (device, location, creation time) from the result.
       tags: {},
       showWarnings: false,

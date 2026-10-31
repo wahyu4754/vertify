@@ -12,6 +12,10 @@ Everything runs in your browser. Your video is never uploaded.
 4. Leave **GPU encoding** on if it says Available. Click **Convert**.
 5. When it finishes, click **Download** to save the vertical MP4.
 
+### Trailer mode
+
+Turn on **Trailer** to export only a 30-second section instead of the whole video. Set where it starts (default 0:00), the popup text (default "Watch full video in the link below") and the popup position (two sliders, or drag the popup in the preview). During the last 5 seconds a white card with that text pops in near the bottom, set in [Mouse Memoirs](https://fonts.google.com/specimen/Mouse+Memoirs) (bundled, no Google request). The preview loops the trailer section with the popup so you can see it before converting. Videos shorter than 30 seconds are exported in full.
+
 ## How it looks
 
 | Layer | What it is |
@@ -53,4 +57,4 @@ The build output in `dist/` is a static site. Deploy it anywhere, for example on
 
 ## License
 
-MIT. Icons by [Solar Icon Set](https://github.com/saoudi-h/solar-icons) (see its license), typeface Geist (SIL OFL).
+MIT. Icons by [Solar Icon Set](https://github.com/saoudi-h/solar-icons) (see its license), typefaces Geist and Mouse Memoirs (SIL OFL).

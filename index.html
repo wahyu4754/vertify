@@ -98,6 +98,44 @@
 
           <label class="switch-row">
             <span class="switch-text">
+              <span class="switch-title">Trailer</span>
+              <span class="hint">Cuts 30 seconds and adds a text popup in the last 5.</span>
+            </span>
+            <input id="trailer" type="checkbox" role="switch" />
+            <span class="switch" aria-hidden="true"></span>
+          </label>
+
+          <div id="trailerFields" class="trailer-fields" hidden>
+            <div class="field">
+              <label for="trailerText">Popup text</label>
+              <input id="trailerText" class="input" type="text" maxlength="80" value="Watch full video in the link below" />
+            </div>
+            <div class="field">
+              <div class="field-head">
+                <label for="popupY">Popup position</label>
+                <output id="popupPosOut" class="num"></output>
+              </div>
+              <div class="pos-row">
+                <label for="popupX">Left to right</label>
+                <input id="popupX" type="range" min="0" max="100" step="1" value="50" />
+              </div>
+              <div class="pos-row">
+                <label for="popupY">Top to bottom</label>
+                <input id="popupY" type="range" min="0" max="100" step="1" value="80" />
+              </div>
+              <p class="hint">You can also drag the popup in the preview.</p>
+            </div>
+            <div class="field">
+              <div class="field-head">
+                <label for="trailerStart">Start at (seconds)</label>
+                <output id="trailerRange" class="num" for="trailerStart"></output>
+              </div>
+              <input id="trailerStart" class="input narrow num" type="number" min="0" step="1" value="0" />
+            </div>
+          </div>
+
+          <label class="switch-row">
+            <span class="switch-text">
               <span class="switch-title">GPU encoding <span id="gpuState" class="chip"></span></span>
               <span id="gpuHint" class="hint"></span>
             </span>

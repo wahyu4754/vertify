@@ -350,6 +350,52 @@ input[type='range'] {
   accent-color: var(--primary);
 }
 
+.trailer-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.pos-row {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+}
+
+.field .pos-row label {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+#preview.dragging {
+  cursor: grabbing;
+}
+
+.input {
+  width: 100%;
+  height: var(--control-height);
+  padding: 0 10px;
+  border: 1px solid var(--control);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+
+.input.narrow {
+  width: 120px;
+}
+
+.input:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 1px;
+}
+
+.input:disabled {
+  opacity: 0.5;
+}
+
 /* Segmented control */
 .seg {
   display: inline-flex;

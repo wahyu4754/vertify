@@ -1,4 +1,5 @@
 import '@fontsource-variable/geist';
+import '@fontsource/mouse-memoirs';
 import './style.css';
 
 import { UploadMinimalisticLinearIcon } from '@solar-icons/static/linear/upload-minimalistic';
@@ -11,6 +12,13 @@ import { CheckCircleLinearIcon } from '@solar-icons/static/linear/check-circle';
 
 import { composeFrame } from './compose';
 import { convert, probe, UnsupportedVideoError, type VideoInfo } from './convert';
+import {
+  drawPopup,
+  loadPopupFont,
+  POPUP_SECONDS,
+  TRAILER_SECONDS,
+  type PopupPosition,
+} from './overlay';
 import { checkBrowserSupport, hasHardwareEncoder } from './support';
 
 const ICONS: Record<string, string> = {
@@ -46,6 +54,14 @@ const fileMetaEl = $('fileMeta');
 const resetBtn = $<HTMLButtonElement>('reset');
 const opacityEl = $<HTMLInputElement>('opacity');
 const opacityOut = $('opacityOut');
+const trailerEl = $<HTMLInputElement>('trailer');
+const trailerFields = $('trailerFields');
+const trailerText = $<HTMLInputElement>('trailerText');
+const trailerStart = $<HTMLInputElement>('trailerStart');
+const trailerRange = $('trailerRange');
+const popupX = $<HTMLInputElement>('popupX');
+const popupY = $<HTMLInputElement>('popupY');
+const popupPosOut = $('popupPosOut');
 const gpuEl = $<HTMLInputElement>('gpu');
 const gpuState = $('gpuState');
 const gpuHint = $('gpuHint');
@@ -105,6 +121,48 @@ function selectedQuality(): 'high' | 'medium' {
 
 // --- preview -------------------------------------------------------------
 
+/** The section of the source that the trailer covers, kept inside the video. */
+function trailerWindow(): { start: number; length: number } {
+  const duration = current?.info.duration ?? 0;
+  const length = Math.min(TRAILER_SECONDS, duration);
+  const start = Math.min(Math.max(0, Number(trailerStart.value) || 0), Math.max(0, duration - length));
+  return { start, length };
+}
+
+function updateTrailerRange(): void {
+  const { start, length } = trailerWindow();
+  trailerStart.max = String(Math.max(0, Math.floor((current?.info.duration ?? 0) - length)));
+  trailerRange.textContent = `${formatTime(start)} – ${formatTime(start + length)}`;
+}
+
+function seekToTrailerStart(): void {
+  if (video && trailerEl.checked) video.currentTime = trailerWindow().start;
+}
+
+function popupPosition(): PopupPosition {
+  return { x: Number(popupX.value) / 100, y: Number(popupY.value) / 100 };
+}
+
+function updatePopupLabel(): void {
+  popupPosOut.textContent = `${popupX.value}% · ${popupY.value}%`;
+}
+
+/** Jumps the preview to a moment where the popup is fully shown. */
+function showPopupInPreview(): void {
+  if (!video || !trailerEl.checked) return;
+  const { start, length } = trailerWindow();
+  video.currentTime = start + length - Math.min(POPUP_SECONDS, length) + 0.5;
+}
+
+let dragging = false;
+
+function dragTo(event: PointerEvent): void {
+  const rect = previewEl.getBoundingClientRect();
+  popupX.value = String(Math.round(Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width)) * 100));
+  popupY.value = String(Math.round(Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height)) * 100));
+  updatePopupLabel();
+}
+
 function drawPreview(): void {
   if (video && video.videoWidth > 0) {
     composeFrame(
@@ -116,6 +174,16 @@ function drawPreview(): void {
       PREVIEW_H,
       { opacity: Number(opacityEl.value) / 100 },
     );
+    if (trailerEl.checked) {
+      const { start, length } = trailerWindow();
+      if (video.currentTime < start || video.currentTime >= start + length) {
+        video.currentTime = start;
+      }
+      const popupStart = length - Math.min(POPUP_SECONDS, length);
+      // While dragging, keep the popup fully visible so it can be placed.
+      const seconds = dragging ? 1 : video.currentTime - start - popupStart;
+      drawPopup(previewCtx, trailerText.value, PREVIEW_W, PREVIEW_H, seconds, popupPosition());
+    }
   }
   frameHandle = requestAnimationFrame(drawPreview);
 }
@@ -170,6 +238,8 @@ async function loadFile(file: File): Promise<void> {
 
   fileNameEl.textContent = file.name;
   fileMetaEl.textContent = `${info.width} × ${info.height} · ${formatTime(info.duration)} · ${formatSize(file.size)}`;
+
+  updateTrailerRange();
 
   dropEl.hidden = true;
   editorEl.hidden = false;
@@ -244,6 +314,9 @@ async function startConversion(): Promise<void> {
       opacity: Number(opacityEl.value) / 100,
       quality: selectedQuality(),
       gpu: gpuEl.checked,
+      trailer: trailerEl.checked
+        ? { ...trailerWindow(), text: trailerText.value, position: popupPosition() }
+        : undefined,
       signal: abort.signal,
       onProgress: (p) => {
         const pct = Math.min(100, Math.round(p * 100));
@@ -258,7 +331,7 @@ async function startConversion(): Promise<void> {
     downloadUrl = URL.createObjectURL(blob);
     const base = current.file.name.replace(/\.[^.]+$/, '') || 'video';
     downloadEl.href = downloadUrl;
-    downloadEl.download = `${base}-vertical.mp4`;
+    downloadEl.download = `${base}-${trailerEl.checked ? 'trailer' : 'vertical'}.mp4`;
     resultName.textContent = downloadEl.download;
     resultMeta.textContent = `${formatSize(blob.size)} · ${width} × ${height} · ${
       mode === 'gpu' ? 'GPU' : 'CPU'
@@ -318,6 +391,46 @@ dropEl.addEventListener('keydown', (e) => {
 opacityEl.addEventListener('input', () => {
   opacityOut.textContent = `${opacityEl.value}%`;
 });
+void loadPopupFont(trailerText.value);
+trailerEl.addEventListener('change', () => {
+  trailerFields.hidden = !trailerEl.checked;
+  // The popup can be dragged on the preview while trailer mode is on.
+  previewEl.style.cursor = trailerEl.checked ? 'grab' : '';
+  previewEl.style.touchAction = trailerEl.checked ? 'none' : '';
+  seekToTrailerStart();
+});
+trailerStart.addEventListener('input', () => {
+  updateTrailerRange();
+  seekToTrailerStart();
+});
+trailerText.addEventListener('input', () => {
+  void loadPopupFont(trailerText.value);
+  showPopupInPreview();
+});
+for (const slider of [popupX, popupY]) {
+  slider.addEventListener('input', () => {
+    updatePopupLabel();
+    showPopupInPreview();
+  });
+}
+updatePopupLabel();
+
+previewEl.addEventListener('pointerdown', (e) => {
+  if (!trailerEl.checked) return;
+  dragging = true;
+  previewEl.classList.add('dragging');
+  previewEl.setPointerCapture(e.pointerId);
+  dragTo(e);
+});
+previewEl.addEventListener('pointermove', (e) => {
+  if (dragging) dragTo(e);
+});
+const endDrag = () => {
+  dragging = false;
+  previewEl.classList.remove('dragging');
+};
+previewEl.addEventListener('pointerup', endDrag);
+previewEl.addEventListener('pointercancel', endDrag);
 toggleBtn.addEventListener('click', () => setPlaying(video?.paused ?? false));
 resetBtn.addEventListener('click', backToStart);
 convertBtn.addEventListener('click', () => void startConversion());
